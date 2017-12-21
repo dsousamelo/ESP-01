@@ -1,122 +1,67 @@
-// Programa : Teste modulo wireless ESP8266
-// Autor : Arduino e Cia
 
-// Carrega as bibliotecas ESP8266 e SoftwareSerial
-#include "ESP8266.h"
-#include "SoftwareSerial.h"
-#include <doxygen.h>
-#include <SPI.h>
+#include <SoftwareSerial.h>
 
-#define DEBUG true
+const byte rxPin = 2;
+const byte txPin = 3;
 
-// Cria uma serial nas portas 2 (RX) e 3 (TX)
-SoftwareSerial esp(2 , 3); 
+SoftwareSerial ESP8266 (rxPin, txPin);
 
-// Define que o modulo ira utilizar a serial minhaSerial
-//ESP8266 wifi(esp);
+unsigned long lastTimeMillis = 0;
 
-// Configuracao ID e senha da rede Wireless
-#define SSID        "TP-LINK_8DDDAE"
-#define PASSWORD    "labiotm06"
+  String contentTemp = "{\"value\":666}";
 
-
-void setup(){   
-    
-    delay(2000);
-  
-    Serial.begin(115200);
-    esp.begin(115200);
-
-    //Envia o comandos AT
- 
-    // reseta o modulo
-    sendData("AT+RST\r",2000,DEBUG);
-    Serial.println("////////////////////////////////////////////////////////////////////////////");
-    // configure as access point e estação (ambos)  
-    sendData("AT+CWMODE=1\r",5000,DEBUG);
-    Serial.println("////////////////////////////////////////////////////////////////////////////");
-    //conecta ao roteador com a senha
-    //(esta configuração deve ser feita, pois o seu roteador tem nome diferente do meu e senha)
-    sendData("AT+CWJAP=\"TP-LINK_8DDDAE\",labiotm06\"\r",15000,DEBUG);
-    Serial.println("////////////////////////////////////////////////////////////////////////////");
-    sendData("AT+CIFSR\r",15000,DEBUG);
-    Serial.println("////////////////////////////////////////////////////////////////////////////");
-    //seta o caminho 
-    sendData("AT+ CIPMUX=0\r",2000,DEBUG);
-    Serial.println("////////////////////////////////////////////////////////////////////////////");
-    sendData("AT + CIPSTART = TCP,192.18.9.100,3000\r",2000,DEBUG);
-    Serial.println("////////////////////////////////////////////////////////////////////////////");
-    sendData("AT+RST\r",2000,DEBUG);
-    
-
-    
+void setup() {
+  Serial.begin(115200);   
+  ESP8266.begin(115200);
+  ESP8266.println("AT+RST");  
+  ESP8266.println("AT+CWJAP=\"TP-LINK_8DDDAE\",\"labiotm06\" ");
+  delay(2000);
 }
 
-void loop(void){
-
-
-  if(esp.available()){
-      Serial.println("SERIAL CONECTADA");
-      //sendData("AT+CWLAP\r\n",10000,DEBUG);
-     
-    }
-
-    delay(2000);
-
-  
-   /* Serial.print("Inicializando modulo\r\n");
-    Serial.print("Versao do firmware: ");
-    Serial.println(wifi.getVersion().c_str());
-    // Define modo de operacao como STA (station)
-    if (wifi.setOprToStation()) {
-        Serial.print("Modo STA ok\r\n");
-    } else {
-        Serial.print("Erro ao definir modo STA !r\n");
-    }
-    
-    // Conexao a rede especificada em SSID
-    if (wifi.joinAP(SSID, PASSWORD)) {
-        Serial.print("Conectado com sucesso a rede wireless\r\n");
-        Serial.print("IP: ");       
-        Serial.println(wifi.getLocalIP().c_str());
-    } else {
-        Serial.print("Erro ao conectar rede wireless !!!\r\n");
-    }
-    
-    Serial.print("*** Fim ***\r\n");
-    while(1){}*/
+void printResponse() {
+  while (ESP8266.available()) {
+    Serial.println(ESP8266.readStringUntil('\n')); 
+  }
 }
 
-//Metodo que envia os comandos para o esp8266
-String sendData(String command, const int timeout, boolean debug)
-{
-    //variavel de resposta do esp8266
-    String response = "";
-   
-    // send a leitura dos caracteres para o esp8266
-    esp.println(command);
-   
-    long int time = millis();
-   
-    while( (time+timeout) > millis())
-    {
-      while(esp.available())
-      {
-       
- 
-        //Concatena caracter por caractere recebido do modulo esp8266
-        char c = esp.read();
-        response+=c;
-      }  
-    }
-   
-    //debug de resposta do esp8266
-    if(debug)
-    {
-      //Imprime o que o esp8266 enviou para o arduino
-      Serial.println("Arduino : " + response);
-      
-    }
-   
-    return response;
+void loop() {
+
+  if (millis() - lastTimeMillis > 30000) {
+    lastTimeMillis = millis();
+
+    ESP8266.println("AT+CIPMUX=1");
+    delay(1000);
+    printResponse();
+
+    ESP8266.println("AT+CIPSTART=4,\"TCP\",\"172.18.9.100\",3000");
+    delay(1000);
+    printResponse();
+
+    String cmd = "GET /temperatures/1 HTTP/1.1";
+    String cmd2 = "PUT /temperatures/1 HTTP/1.1\r\nHost:172.18.9.100:3000\r\nUser-Agent: Arduino/1.0\r\nAccept: application/json\r\nContent-Length:"+(String)contentTemp.length()+"\r\nContent-Type: application/json\r\nConnection: close\r\n\n"+contentTemp;
+    ESP8266.println("AT+CIPSEND=4," + String(cmd2.length()+4));
+    delay(1000);
+    Serial.println(cmd2);
+
+    ESP8266.println("PUT /temperatures/1 HTTP/1.1");
+    ESP8266.println("Host:172.18.9.100:3000");
+    ESP8266.println("User-Agent: Arduino/1.0");
+    ESP8266.println("Accept: application/json");
+    ESP8266.print("Content-Length:");
+    ESP8266.println(contentTemp.length());
+    ESP8266.println("Content-Type: application/json");
+    ESP8266.println("Connection: close");
+    ESP8266.println("");
+    ESP8266.println(contentTemp);
+    
+
+    
+    delay(1000);
+    ESP8266.println(""); 
+  }
+
+  if (ESP8266.available()) {
+    Serial.write(ESP8266.read());
+  }
+
 }
