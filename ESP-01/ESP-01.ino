@@ -1,5 +1,6 @@
 
 
+
 #include <SoftwareSerial.h>
 #include <EventManager.h>
 #include <MsTimer2.h>
@@ -13,23 +14,18 @@
 
   const byte rxPin = 2;
   const byte txPin = 3;
-
-  unsigned long lastTimeMillis = 0;
+  
 
   SoftwareSerial ESP8266 (rxPin, txPin);
   DHT dht(DHTPIN, DHTTYPE);
   EventManager gEM;
-//  unsigned long lastTimeMillis = 0;
-  //String contentTemp = "{\"value\":1000}";
+
   int ldrPin = 1; //LDR no pino analógico 1
   int ldrValor = 0; //Valor lido do LDR
   int temperature;
   String contentI = "{\"value\":";
   String contentI2 = "{\"state\":";
-  int cont=0;
-void interruptHandler(){
-    Serial.println("INTERRUPÇAO");
-  }
+
 
 void printResponse() {
   while (ESP8266.available()) {
@@ -40,17 +36,16 @@ void printResponse() {
 void setup() {
   
     Serial.begin(115200);   
+    
     ESP8266.begin(115200);    
     ESP8266.println("AT+RST"); 
     ESP8266.println("AT+CWJAP=\"TP-LINK_8DDDAE\",\"labiotm06\" ");  
-    ESP8266.println("AT+CWMODE=1");  
+    ESP8266.println("AT+CWMODE=3"); 
     
-     
-    dht.begin();
-    /*MsTimer2::set(300000, updateTemp ); 
+    /*MsTimer2::set(10000, updateTemp ); 
     MsTimer2::start();*/
-   
-    
+
+    dht.begin();
 
     delay(2000);
   
@@ -58,66 +53,56 @@ void setup() {
 
 
 
-void loop(){ 
-
+void loop(){
+       
+   //updateTemp();
+   //delay(100);
    updateDoor();
-   delay(500);
+   delay(100);
    updateLu();
    
-   gEM.processEvent();  
-   
 } 
-
-
-
-
 
 void updateTemp(){ 
     
     Serial.println("//////////////////////TEMPERATURA//////////////////////////");
 
-    temperature = dht.readTemperature(); 
-    Serial.println(temperature);           
-    String str = String(temperature);  
-    String  contentTemp = contentI+str+"}";
-      
+        temperature = dht.readTemperature();   
 
-    ESP8266.println("AT+CIPMUX=1");
-    delay(50);
-    printResponse();
-
-    ESP8266.println("AT+CIPSTART=4,\"TCP\",\"172.18.9.100\",3000");
-     delay(50);
-    printResponse();
+        Serial.println(temperature);           
+        String str = String(temperature);  
+        String  contentTemp = contentI+str+"}";          
     
-    String cmd2 = "PUT /temperatures/1 HTTP/1.1\r\nHost:172.18.9.100:3000\r\nUser-Agent: Arduino/1.0\r\nAccept: application/json\r\nContent-Length:"+(String)contentTemp.length()+"\r\nContent-Type: application/json\r\nConnection: close\r\n\n"+contentTemp;
-    ESP8266.println("AT+CIPSEND=4," + String(cmd2.length()+4));
+        ESP8266.println("AT+CIPMUX=1");
+        delay(100);
+   
     
-
-    Serial.println(cmd2);
-    
-    ESP8266.println("PUT /temperatures/1 HTTP/1.1");
-    ESP8266.println("Host:172.18.9.100:3000");
-    ESP8266.println("User-Agent: Arduino/1.0");
-    ESP8266.println("Accept: application/json");
-    ESP8266.print("Content-Length:");
-    ESP8266.println(contentTemp.length());
-    ESP8266.println("Content-Type: application/json");
-    ESP8266.println("Connection: close");
-    ESP8266.println("");
-    ESP8266.println(contentTemp);
-    
-    ///////////////////////////////////////////////////////////// 
-    
-    
-    
-    delay(100);  
-    ESP8266.println("");
-    ESP8266.println("AT+CIPCLOSE=4");  
-
-    if(ESP8266.available()) {
-      Serial.write(ESP8266.read());
-    }
+        ESP8266.println("AT+CIPSTART=4,\"TCP\",\"172.18.9.100\",3000");
+        delay(100);
+        
+        String cmd2 = "PUT /temperatures/1 HTTP/1.1\r\nHost:172.18.9.100:3000\r\nUser-Agent: Arduino/1.0\r\nAccept: application/json\r\nContent-Length:"+(String)contentTemp.length()+"\r\nContent-Type: application/json\r\nConnection: close\r\n\n"+contentTemp;
+        ESP8266.println("AT+CIPSEND=4," + String(cmd2.length()+4));   
+        delay(100); 
+   
+        
+        Serial.println(cmd2);
+        
+        ESP8266.println("PUT /temperatures/1 HTTP/1.1");
+        ESP8266.println("Host:172.18.9.100:3000");
+        ESP8266.println("User-Agent: Arduino/1.0");
+        ESP8266.println("Accept: application/json");
+        ESP8266.print("Content-Length:");
+        ESP8266.println(contentTemp.length());
+        ESP8266.println("Content-Type: application/json");
+        ESP8266.println("Connection: close");
+        ESP8266.println("");
+        ESP8266.println(contentTemp);
+        
+        ///////////////////////////////////////////////////////////// 
+        
+        delay(100);  
+        ESP8266.println("");
+       
    
 }
 
@@ -140,16 +125,17 @@ void updateLu(){
     }
 
     ESP8266.println("AT+CIPMUX=1");
-    delay(50);
-    printResponse();
+    delay(100);
+    
 
     ESP8266.println("AT+CIPSTART=4,\"TCP\",\"172.18.9.100\",3000");
-    delay(50);
-    printResponse(); 
+    delay(100);
+  
 
     String cmd2 = "PUT /lights/1 HTTP/1.1\r\nHost:172.18.9.100:3000\r\nUser-Agent: Arduino/1.0\r\nAccept: application/json\r\nContent-Length:"+(String)contentLu.length()+"\r\nContent-Type: application/json\r\nConnection: close\r\n\n"+contentLu;
     ESP8266.println("AT+CIPSEND=4," + String(cmd2.length()+4));
-    printResponse();
+    delay(100);
+ 
   
     Serial.println(cmd2);
     
@@ -168,13 +154,8 @@ void updateLu(){
      
     delay(100);  
     ESP8266.println("");
-    ESP8266.println("AT+CIPCLOSE=4");  
+    
   
-    if (ESP8266.available()) {
-      Serial.write(ESP8266.read());
-    }
-  
-   
 }
 
 
@@ -194,16 +175,17 @@ void updateDoor(){
     }
   
     ESP8266.println("AT+CIPMUX=1");
-    delay(50);
-    printResponse();
+    delay(100);
+   
 
     ESP8266.println("AT+CIPSTART=4,\"TCP\",\"172.18.9.100\",3000");
-    delay(50);
-    printResponse();
+    delay(100);
+  
 
     String cmd2 = "PUT /doors/1 HTTP/1.1\r\nHost:172.18.9.100:3000\r\nUser-Agent: Arduino/1.0\r\nAccept: application/json\r\nContent-Length:"+(String)contentDoor.length()+"\r\nContent-Type: application/json\r\nConnection: close\r\n\n"+contentDoor;
     ESP8266.println("AT+CIPSEND=4," + String(cmd2.length()+4));
-    printResponse();
+    delay(100);
+
   
     Serial.println(cmd2);
    
@@ -223,13 +205,8 @@ void updateDoor(){
     
     delay(100);  
     ESP8266.println("");
-    ESP8266.println("AT+CIPCLOSE=4");  
- 
-    if (ESP8266.available()) {
-      Serial.write(ESP8266.read());
-    }
-  
-  
+    
 }
+
 
 
