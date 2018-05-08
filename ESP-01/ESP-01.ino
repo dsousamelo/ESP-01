@@ -39,7 +39,7 @@ void setup() {
     
     ESP8266.begin(115200);    
     ESP8266.println("AT+RST"); 
-    ESP8266.println("AT+CWJAP=\"TP-LINK_8DDDAE\",\"labiotm06\" ");  
+    ESP8266.println("AT+CWJAP=\"NOME_WIFI\",\"SENHA_WIFI\" ");  
     ESP8266.println("AT+CWMODE=3"); 
     
     /*MsTimer2::set(10000, updateTemp ); 
